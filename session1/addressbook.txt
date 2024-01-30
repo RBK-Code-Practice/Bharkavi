@@ -1,0 +1,140 @@
+import AppConfig from '@App/appConfig/AppConfig';
+import configJson from '@App/config.json';
+import AddNewAddressTile from '@Components/checkout/userShippingAddress/addNewCard/AddNewAddressTile';
+import AddressTile from '@Components/checkout/userShippingAddress/addressTile/AddressTile';
+import { Row, Col, Container } from '@EB-UI/layout';
+import Typography from '@EB-UI/typography/Typography';
+import { PageDetailsLoad } from '@Libs/dataLayer/DataLayer';
+import { updateCurrentPage } from '@Redux/actions/App';
+import { useRouter } from 'next/router';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import SideBar from '../Sidebar';
+import PlaceHolder from '../AddressBookPlaceHolder';
+import styles from './AddressBook.module.scss';
+
+/**
+ * Addressbook Component
+ * @returns
+ * */
+
+const Addressbook = () => {
+  const pageTitle = 'Address Book';
+  const { showMenu, user } = useSelector((state) => state.account);
+  const { isMobile, isTablet } = useSelector((state) => state.device);
+  const [layoutLoader, setlayoutLoader] = useState(true);
+  const { addresses: adddressList = [] } = user || {};
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const [isDatalayerReady, setIsDatalayerReady] = useState(false);
+
+  useEffect(() => {
+    if (adddressList) {
+      setlayoutLoader(false);
+    }
+  }, [adddressList]);
+
+  /**MAX Address Count **/
+  const addressCountThreshold = configJson?.addressCountThreshold;
+
+  useEffect(async () => {
+    // setTimeout(async () => {
+    await dispatch(
+      updateCurrentPage({
+        title: pageTitle,
+        url: router?.asPath,
+        fullUrl: window?.location?.origin + '/my-account/addressbook',
+      })
+    );
+    setIsDatalayerReady(true);
+    // }, 100);
+  }, []);
+
+  return (
+    <Row>
+      {isDatalayerReady && (
+        <PageDetailsLoad page_name={pageTitle} page_type="ADDRESS BOOK"></PageDetailsLoad>
+      )}
+      <Row
+        className={` ${styles.addressbookContainer}
+            ${styles.addressbookContentPanelContainer}
+        `}
+      >
+        <Container>
+          <Row
+            columnGap={15}
+            justifyContent="space-between"
+            className={styles.addressbookContentPanelContainerBox}
+          >
+            <SideBar section="addressbook" />
+
+            {!showMenu || (!isMobile && !isTablet) ? (
+              <Col md={9} lg={9} className={styles.addressbookOffsetWidth}>
+                <Row rowGap={10} className={styles.addressbookTabLayout}>
+                  {layoutLoader ? (
+                    <PlaceHolder />
+                  ) : (
+                    <>
+                      <Typography variant="header" className={styles.addressbookTitle}>
+                        {AppConfig.getCMSMessage('myaccount.main.addressbook.title')}
+                      </Typography>
+                      <Typography variant="p_subHeader" className={styles.addressbookDescription}>
+                        <span>
+                          {adddressList?.length !== addressCountThreshold &&
+                            AppConfig.getCMSMessage(
+                              'myaccount.main.addressbook.remaining_address_slot'
+                            ).replace(
+                              '{count}',
+                              `${
+                                adddressList?.length < 1
+                                  ? addressCountThreshold
+                                  : addressCountThreshold - adddressList?.length
+                              } / ${addressCountThreshold}`
+                            )}
+                        </span>
+                        <span>
+                          {adddressList?.length === addressCountThreshold && (
+                            <>
+                              {AppConfig.getCMSMessage(
+                                'myaccount.main.addressbook.remaining_address_slot'
+                              ).replace(
+                                '{count}',
+                                `${
+                                  adddressList?.length < 1
+                                    ? addressCountThreshold
+                                    : addressCountThreshold - adddressList?.length
+                                } / ${addressCountThreshold}`
+                              )}
+                              {AppConfig.getCMSMessage(
+                                'myaccount.main.addressbook.Delete_an_address'
+                              )}
+                            </>
+                          )}
+                        </span>
+                      </Typography>
+
+                      <Row rowGap={20} columnGutter={20} className={styles.addressbookColumnSpace}>
+                        {adddressList?.length < 5 && <AddNewAddressTile isAccount={true} />}
+                        {adddressList?.map((item) => (
+                          <AddressTile
+                            key={`address_${item?.id}`}
+                            item={item}
+                            isSelected={item?.isDefaultShipTo}
+                            isAccount={true}
+                          />
+                        ))}
+                      </Row>
+                    </>
+                  )}
+                </Row>
+              </Col>
+            ) : (
+              ''
+            )}
+          </Row>
+        </Container>
+      </Row>
+    </Row>
+  );
+};
+export default Addressbook;
